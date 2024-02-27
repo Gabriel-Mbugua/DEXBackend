@@ -7,6 +7,7 @@ require('dotenv').config({
 const INFURA_API_KEY = process.env.INFURA_API_KEY;
 const POOL_FACTORY_CONTRACT_ADDRESS ='0x1F98431c8aD98523631AE4a59f267346ea31F984'
 const QUOTER_CONTRACT_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
+const SWAP_ROUTER_ADDRESS = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
 
 const tokenList = [
     {
@@ -32,6 +33,57 @@ const tokenList = [
     },
     {
         chainId: 1,
+        chain: "Ethereum",
+        name: 'Wrapped BTC',
+        symbol: "WBTC",
+        contractAddress: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+    },
+    {
+        chainId: 1,
+        chain: "Ethereum",
+        name: 'Ether',
+        symbol: "ETH",
+        contractAddress: "NATIVE" // Indicative value to denote native token
+    },
+    // Binance Smart Chain's native token
+    {
+        chainId: 56,
+        chain: "Binance Smart Chain",
+        name: 'Binance Coin',
+        symbol: "BNB",
+        contractAddress: "NATIVE" // Indicative value to denote native token
+    },
+    // Polygon's native token
+    {
+        chainId: 137,
+        chain: "Polygon",
+        name: 'Matic Token',
+        symbol: "MATIC",
+        contractAddress: "NATIVE" // Indicative value to denote native token
+    },
+    {
+        chainId: 5777,
+        chain: "Ethereum",
+        name: 'Wrapped Eth',
+        symbol: "WETH",
+        contractAddress: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    },
+    {
+        chainId: 5777,
+        chain: "Ethereum",
+        name: 'USDT (Tether)',
+        symbol: "USDT",
+        contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+    },
+    {
+        chainId: 5777,
+        chain: "Ethereum",
+        name: 'USDC (Circle)',
+        symbol: "USDC",
+        contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    },
+    {
+        chainId: 5777,
         chain: "Ethereum",
         name: 'Wrapped BTC',
         symbol: "WBTC",
@@ -74,6 +126,8 @@ const getChainId = (chainName) => {
         case 'eth':
         case 'ethereum':
             return 1;
+        case 'ganache':
+            return 5777;
         case 'optimism':
             return 10;
         case 'goerli':
@@ -120,8 +174,11 @@ const getRpcUrl = (chainName) => {
             case 'eth':
             case 'ethereum':
                 return `https://mainnet.infura.io/v3/${INFURA_API_KEY}`
+                // return `127.0.0.1:7545`
             case 'goerli':
-                return `https://goerli.infura.io/v3/${INFURA_API_KEY}`;
+                return `https://goerli.infura.io/v3/${INFURA_API_KEY}`
+            case 'ganache':
+                return `http://127.0.0.1:7545`;
             case 'arbitrum one':
                 return `https://arbitrum-mainnet.infura.io/v3/${INFURA_API_KEY}`;
             case 'arbitrum goerli':
@@ -165,4 +222,5 @@ module.exports ={
     getProvider,
     QUOTER_CONTRACT_ADDRESS,
     POOL_FACTORY_CONTRACT_ADDRESS,
+    SWAP_ROUTER_ADDRESS,
 }

@@ -1,8 +1,11 @@
-const { FeeAmount, Route, Pool, SwapQuoter, computePoolAddress } = require('@uniswap/v3-sdk')
-const { CurrencyAmount, TradeType } = require('@uniswap/sdk-core')
-const { ethers } = require('ethers');
-const { POOL_FACTORY_CONTRACT_ADDRESS, QUOTER_CONTRACT_ADDRESS, getProvider } = require('./constants')
+const { FeeAmount, Route, Pool, SwapQuoter, computePoolAddress, Trade, SwapOptions } = require('@uniswap/v3-sdk')
+const { CurrencyAmount, TradeType, Percent } = require('@uniswap/sdk-core')
+const { ethers, BigNumber } = require('ethers');
+const JSBI = require('jsbi')
+const { POOL_FACTORY_CONTRACT_ADDRESS, QUOTER_CONTRACT_ADDRESS, getProvider, SWAP_ROUTER_ADDRESS } = require('./constants')
 const { fetchToken } = require('./tokens')
+const ERC20_ABI = require('../abi/erc20.json')
+const PRIVATE_KEY= process.env.PRIVATE_KEY
 
 /* ----------------------------------- ABI ---------------------------------- */
 const IUniswapV3PoolABI = require('@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json')
@@ -128,6 +131,7 @@ const getOutputQuote = async ({
     provider
 }) => {
     try{
+        /* ------- gives us the calldata needed to make the call to the Quoter ------ */
         const { calldata } = await SwapQuoter.quoteCallParameters(
             swapRoute,
             CurrencyAmount.fromRawAmount(
@@ -142,8 +146,6 @@ const getOutputQuote = async ({
             useQuoterV2: true,
             }
         )
-
-        console.log({calldata})
         
         const quoteCallReturnData = await provider.call({
             // to: QUOTER_CONTRACT_ADDRESS,
@@ -159,11 +161,79 @@ const getOutputQuote = async ({
 
         return {
             amountOut,
-            readableAmountOut
+            readableAmountOut,
+            calldata
         }
     }catch(err){
         console.error(err)
         throw err
+    }
+}
+
+const sendTransaction = async ({
+    signer,
+    transaction,
+    provider
+}) => {
+    try{
+        if (transaction.value) transaction.value = BigNumber.from(transaction.value)
+        const txRes = await signer.sendTransaction(transaction)
+    
+        let receipt = null
+    
+        while (receipt === null) {
+            try {
+                receipt = await provider.getTransactionReceipt(txRes.hash)
+        
+                if (receipt === null) continue
+            } catch (e) {
+                console.log(`Receipt error:`, e)
+                break
+            }
+        }
+    
+        // Transaction was successful if status === 1
+        if (receipt) return receipt
+        
+        throw new Error('Transaction failed')
+    } catch(err){
+        console.error(err)
+        throw new Error(err)
+    }
+}
+
+const getTokenTransferApproval = async ({
+    token,
+    amount,
+    provider,
+    signer
+}) => {
+    try {
+        const tokenContract = new ethers.Contract(
+            token.token.address,
+            ERC20_ABI,
+            provider
+        )
+    
+        const transaction = await tokenContract.populateTransaction.approve(
+            SWAP_ROUTER_ADDRESS,
+            fromReadableAmount(
+                amount,
+                token.decimals
+            ).toString()
+        )
+    
+        return sendTransaction({
+            signer,
+            provider,
+            transaction: {
+                ...transaction,
+                from: signer.address,
+            },
+        })
+    } catch (err) {
+      console.error(err)
+      throw err
     }
 }
 
@@ -175,12 +245,16 @@ const executeTrade = async ({
     chain
 }) => {
     try{
+        console.log('Initiating trade...')
         const provider = await getProvider(chain)
 
         const [ fromToken, toToken ] = await Promise.all([
             fetchToken({ chain, symbol: from, provider }),
             fetchToken({ chain, symbol: to, provider })
         ])
+
+        if(!fromToken) throw new Error(`Token ${from} not found`)
+        if(!toToken) throw new Error(`Token ${to} not found`)
 
         const { sqrtPriceX96, tick, liquidity, fee } = await getPoolInfo({
             provider,
@@ -203,7 +277,7 @@ const executeTrade = async ({
             toToken.token
         )
 
-        const { amountOut, readableAmountOut } = await getOutputQuote({
+        const { amountOut, readableAmountOut, calldata } = await getOutputQuote({
             swapRoute,
             fromToken,
             fromAmount,
@@ -211,9 +285,75 @@ const executeTrade = async ({
             provider
         })
 
-        // const signer = new ethers.Wallet(privateKey, provider)
+        console.log({amountOut, readableAmountOut, calldata})
 
-        return amountOut
+        /* ------------------------ decode the returned quote ----------------------- */
+        const quoteCallReturnData = await provider.call({
+            to: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            data: calldata,
+        })
+
+        console.log({quoteCallReturnData})
+        
+        const decodedQuote = ethers.utils.defaultAbiCoder.decode(['uint256'], quoteCallReturnData)
+
+        console.log({decodedQuote})
+
+        /* ---------------------------- create our Trade ---------------------------- */
+        const uncheckedTrade = Trade.createUncheckedTrade({
+            route: swapRoute,
+            inputAmount: CurrencyAmount.fromRawAmount(
+              fromToken.token,
+              fromReadableAmount(
+                fromAmount,
+                fromToken.decimals
+              )
+            ),
+            outputAmount: CurrencyAmount.fromRawAmount(
+              toToken.token,
+              JSBI.BigInt(amountOut)
+            ),
+            tradeType: TradeType.EXACT_INPUT,
+        })
+
+        const signer = new ethers.Wallet(privateKey, provider)
+
+        /* --------- Give the SwapRouter approval to spend our tokens for us -------- */
+        const tokenApproval = await getTokenTransferApproval({
+            token: fromToken,
+            amount: fromAmount,
+            signer,
+            provider
+        })
+
+        console.log({ tokenApproval })
+
+
+        /* ---- specify time & slippage for our execution and the address to use ---- */
+        const options = {
+            slippageTolerance: new Percent(50, 10_000), // 50 bips, or 0.50%
+            deadline: Math.floor(Date.now() / 1000) + 60 * 5, // 5 minutes from the current Unix time
+            recipient: signer.address,
+        }
+
+        /* ------ get the associated call parameters for our trade and options ------ */
+        const methodParameters = SwapRouter.swapCallParameters([uncheckedTrade], options)
+
+        /* --- construct a tx from the method parameters and send the transaction --- */
+        const tx = {
+            data: methodParameters.calldata,
+            to: SWAP_ROUTER_ADDRESS,
+            value: methodParameters.value,
+            from: signer.address,
+            maxFeePerGas: 100_000_000_000,
+            maxPriorityFeePerGas: 100_000_000_000,
+        }
+
+        console.log(tx)
+          
+        const response = await signer.sendTransaction(tx)
+
+        return response
     }catch(err){
         console.error(err)
         throw new Error(err)
@@ -221,13 +361,16 @@ const executeTrade = async ({
 }
 
 // executeTrade({
-//     privateKey: "0xb0157fe943204352e42552b9519b551238e35afc4cf0808842d522ae9af6c62a",
+//     privateKey: PRIVATE_KEY,
 //     from: 'USDT', 
 //     to: 'WETH', 
 //     chain: "ethereum", 
-//     fromAmount: '4000'
+//     fromAmount: '0.01'
 // }).then(res => console.log(res))
 
 module.exports = {
-    uniswapGetDirectQuote: getDirectQuote
+    /* --------------------------------- QUOTES --------------------------------- */
+    uniswapGetDirectQuote: getDirectQuote,
+    /* --------------------------------- TRADES --------------------------------- */
+    uniswapExecuteTrade: executeTrade
 }
