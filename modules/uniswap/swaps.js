@@ -1,8 +1,9 @@
 const { FeeAmount, Route, Pool, SwapQuoter, computePoolAddress, Trade, SwapOptions } = require('@uniswap/v3-sdk')
 const { CurrencyAmount, TradeType, Percent } = require('@uniswap/sdk-core')
+const { AlphaRouter, ChainId, SwapOptionsSwapRouter02, SwapType } = require('@uniswap/smart-order-router')
 const { ethers, BigNumber } = require('ethers');
 const JSBI = require('jsbi')
-const { POOL_FACTORY_CONTRACT_ADDRESS, QUOTER_CONTRACT_ADDRESS, getProvider, SWAP_ROUTER_ADDRESS } = require('./constants')
+const { POOL_FACTORY_CONTRACT_ADDRESS, QUOTER_CONTRACT_ADDRESS, getProvider, SWAP_ROUTER_ADDRESS, getChainId, V3_SWAP_ROUTER_ADDRESS } = require('./constants')
 const { fetchToken } = require('./tokens')
 const ERC20_ABI = require('../abi/erc20.json')
 const PRIVATE_KEY= process.env.PRIVATE_KEY
@@ -10,7 +11,7 @@ const PRIVATE_KEY= process.env.PRIVATE_KEY
 /* ----------------------------------- ABI ---------------------------------- */
 const IUniswapV3PoolABI = require('@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json')
 const Quoter = require('@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json');
-const { toReadableAmount, fromReadableAmount } = require('./conversions');
+const { toReadableAmount, fromReadableAmount, fromReadableAmountToSmalletUnit } = require('./conversions');
 
 const getPoolInfo = async ({
     provider,
@@ -359,7 +360,6 @@ const executeTrade = async ({
         throw new Error(err)
     }
 }
-
 // executeTrade({
 //     privateKey: PRIVATE_KEY,
 //     from: 'USDT', 
@@ -368,9 +368,96 @@ const executeTrade = async ({
 //     fromAmount: '0.01'
 // }).then(res => console.log(res))
 
+const executeSmartRoute = async ({
+    privateKey,
+    from,
+    to,
+    fromAmount,
+    chain
+}) => {
+    try{
+        console.log('Executing smart route...')
+        const provider = await getProvider(chain)
+        const chainId = getChainId(chain)
+        const wallet = new ethers.Wallet(privateKey, provider)
+
+        const [ fromToken, toToken ] = await Promise.all([
+            fetchToken({ chain, symbol: from, provider }),
+            fetchToken({ chain, symbol: to, provider })
+        ])
+
+        if(!fromToken) throw new Error(`Token ${from} not found`)
+        if(!toToken) throw new Error(`Token ${to} not found`)
+        
+        console.log(`Fetching pools for ${fromToken.symbol} and ${toToken.symbol}...`)
+
+        const router = new AlphaRouter({
+            chainId,
+            provider,
+        })
+
+        const options = {
+            recipient: wallet.address, // wallet to use
+            slippageTolerance: new Percent(50, 10_000), //slippage tolerance
+            deadline: Math.floor(Date.now() / 1000 + 1800), //  deadline for the transaction 
+            type: SwapType.SWAP_ROUTER_02,
+        }
+
+        // create a trade with the currency & the input amount to use to get a quote 
+        const rawTokenAmountIn = fromReadableAmountToSmalletUnit(
+            fromAmount,
+            fromToken.decimals
+        )
+            
+        const route = await router.route(
+            CurrencyAmount.fromRawAmount(
+                fromToken.token,
+                rawTokenAmountIn
+            ),
+            toToken.token,
+            TradeType.EXACT_INPUT,
+            options
+        )
+
+        if (!route || !route.methodParameters) throw new Error('No route exists.')
+
+        /* --- Give approval to the SwapRouter smart contract to spend our tokens --- */
+        const tokenContract = new ethers.Contract(
+            fromToken.token.address, 
+            ERC20_ABI, 
+            wallet
+        )
+
+        // We need to wait one block for the approval tx to be included to the blockchain.
+        const tokenApproval = await tokenContract.approve(
+            V3_SWAP_ROUTER_ADDRESS, 
+            ethers.BigNumber.from(rawTokenAmountIn.toString())
+        )
+
+        // execute the trade using the route's computed calldata, values, & gas values
+        const txRes = await wallet.sendTransaction({
+            data: route.methodParameters.calldata,
+            to: V3_SWAP_ROUTER_ADDRESS,
+            value: route.methodParameters.value,
+            from: wallet.address,
+            maxFeePerGas: 100_000_000_000,
+            maxPriorityFeePerGas: 100_000_000_000,
+        })
+
+
+        return txRes
+    }catch(err){
+        console.error(err)
+        throw new Error(err)
+    }
+}
+
+/* -------------------------------- EXPORTS --------------------------------- */
+
 module.exports = {
     /* --------------------------------- QUOTES --------------------------------- */
     uniswapGetDirectQuote: getDirectQuote,
     /* --------------------------------- TRADES --------------------------------- */
-    uniswapExecuteTrade: executeTrade
+    uniswapExecuteTrade: executeTrade,
+    uniswapExecuteSmartRoute: executeSmartRoute,
 }
