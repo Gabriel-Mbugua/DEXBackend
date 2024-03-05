@@ -3,27 +3,34 @@ const { CurrencyAmount, TradeType, Percent } = require('@uniswap/sdk-core')
 const { AlphaRouter, ChainId, SwapOptionsSwapRouter02, SwapType } = require('@uniswap/smart-order-router')
 const { ethers, BigNumber } = require('ethers');
 const JSBI = require('jsbi')
-const { POOL_FACTORY_CONTRACT_ADDRESS, QUOTER_CONTRACT_ADDRESS, getProvider, SWAP_ROUTER_ADDRESS, getChainId, V3_SWAP_ROUTER_ADDRESS } = require('./constants')
+const { QUOTER_CONTRACT_ADDRESS, getProvider, SWAP_ROUTER_ADDRESS, getChainId, V3_SWAP_ROUTER_ADDRESS, getUniswapV3FactoryContract, getUniswapQuoterContract } = require('./constants')
 const { fetchToken } = require('./tokens')
 const ERC20_ABI = require('../abi/erc20.json')
 const PRIVATE_KEY= process.env.PRIVATE_KEY
 
 /* ----------------------------------- ABI ---------------------------------- */
 const IUniswapV3PoolABI = require('@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json')
+const { abi: SwapRouterABI } = require('@uniswap/v3-periphery/artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json')
 const Quoter = require('@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json');
 const { toReadableAmount, fromReadableAmount, fromReadableAmountToSmalletUnit } = require('./conversions');
 
 const getPoolInfo = async ({
     provider,
+    chain,
     fromToken,
-    toToken
+    toToken,
+    requestFee = FeeAmount.HIGH,
+
 }) => {
     try{
+        console.log({chain})
+        const poolFactoryContract = getUniswapV3FactoryContract(chain)
+
         const request = {
-            factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS,
+            factoryAddress: poolFactoryContract,
             tokenA: fromToken.token,
             tokenB: toToken.token,
-            fee: FeeAmount.MEDIUM,
+            fee: requestFee
         }
 
         /* ---------------- Fetch the deployment address of the pair ---------------- */
@@ -34,6 +41,8 @@ const getPoolInfo = async ({
             IUniswapV3PoolABI.abi,
             provider
         )
+
+        console.log({ poolContractAddress: poolContract.address})
 
         let [token0, token1, fee, liquidity, slot0] = await Promise.all([
             poolContract.token1(),
@@ -50,22 +59,30 @@ const getPoolInfo = async ({
             liquidity, // The amount of liquidity the Pool can use for trades at the current price.
             sqrtPriceX96: slot0[0], // The current Price of the pool, encoded as a ratio between token0 and token1.
             tick: slot0[1], // The tick at the current price of the pool.
+            poolContractAddress: poolContract.address
         }
     }catch(err){
         console.error(err)
         throw err
     }
 }
+// getPoolInfo({
+//     chain: 'sepolia',
+//     fromToken: 'WETH',
+//     toToken: 'USDT'
+// }).then(res => console.log(res))
 
 const getDirectQuote = async ({ 
     to, 
     from, 
     chain,
     fromAmount, 
+    requestFee,
 }) => {
     try{
         console.log(`Generating quote...`)
         console.time('FetchQuote')
+        const quoterContractAddress = getUniswapQuoterContract(chain)
         const provider = await getProvider(chain)
 
         const [ fromToken, toToken ] = await Promise.all([
@@ -77,12 +94,14 @@ const getDirectQuote = async ({
             /* ------------- Construct the pool contract to interact with it ------------ */
             getPoolInfo({
                 provider,
+                chain,
                 fromToken,
-                toToken
+                toToken,
+                requestFee,
             }),
             /* ------------ Construct the quote contract to interact with it ------------ */
             new ethers.Contract(
-                QUOTER_CONTRACT_ADDRESS,
+                quoterContractAddress,
                 Quoter.abi,
                 provider
             )
@@ -113,7 +132,8 @@ const getDirectQuote = async ({
             feeAmount,
             liquidity,
             feePercentage,
-            quotedAmountOut
+            quotedAmountOut,
+            chain
         }
     }catch(err){
         console.time('FetchQuote')
@@ -259,6 +279,7 @@ const executeTrade = async ({
 
         const { sqrtPriceX96, tick, liquidity, fee } = await getPoolInfo({
             provider,
+            chain,
             fromToken,
             toToken
         })
@@ -455,6 +476,8 @@ const executeSmartRoute = async ({
 /* -------------------------------- EXPORTS --------------------------------- */
 
 module.exports = {
+    /* ---------------------------------- POOL ---------------------------------- */
+    uniswapGetPoolInfo: getPoolInfo,
     /* --------------------------------- QUOTES --------------------------------- */
     uniswapGetDirectQuote: getDirectQuote,
     /* --------------------------------- TRADES --------------------------------- */
