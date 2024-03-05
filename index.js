@@ -7,9 +7,9 @@ const PRIVATE_KEY= process.env.PRIVATE_KEY
 // uniswapGetDirectQuote({ 
 //     from: 'USDT', 
 //     to: 'WETH', 
-//     chain: "polygon", 
+//     chain: "optimism", 
 //     fromAmount: '4000',
-//     requestFee: uniswapFee.medium
+//     requestFee: uniswapFee.low
 // }).then(res => console.log(res))
 // uniswapGetDirectQuote({ 
 //     from: 'USDT', 

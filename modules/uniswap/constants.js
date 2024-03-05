@@ -11,7 +11,7 @@ const SWAP_ROUTER_ADDRESS = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
 const V3_SWAP_ROUTER_ADDRESS = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45'
 
 const tokenList = [
-    /* ---------------------------------- WETH ---------------------------------- */
+    /* ----------------------------------- ETH ---------------------------------- */
     {
         chainId: 1,
         chain: "Ethereum",
@@ -29,69 +29,18 @@ const tokenList = [
         contractAddress: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     },
     {
-        chainId: 11155111,
-        chain: "Sepolia",
-        name: 'Wrapped Eth',
-        symbol: "WETH",
-        contractAddress: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9"
-    },
-    {
-        chainId: 137,
-        chain: "Polygon",
-        name: 'Wrapped Eth',
-        symbol: "WETH",
-        contractAddress: "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619"
-    },
-    {
-        chainId: 42161,
-        chain: "Arbitrum",
-        name: 'Wrapped Eth',
-        symbol: "WETH",
-        contractAddress: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
-    },
-    /* ---------------------------------- USDT ---------------------------------- */
-    {
         chainId: 1,
         chain: "Ethereum",
         name: 'USDT (Tether)',
         symbol: "USDT",
-        contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7"
     },
-    {
-        chainId: 42161,
-        chain: "Arbitrum",
-        name: 'USDT (Tether)',
-        symbol: "USDT",
-        contractAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"
-    },
-    {
-        chainId: 11155111,
-        chain: "Sepolia",
-        name: 'USDT',
-        symbol: "USDT",
-        contractAddress: "0xe8888fe3bde6f287bdd0922bea6e0bf6e5f418e7"
-    },
-    /* ---------------------------------- USDC ---------------------------------- */
     {
         chainId: 1,
         chain: "Ethereum",
         name: 'USDC (Circle)',
         symbol: "USDC",
-        contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-    },
-    {
-        chainId: 11155111,
-        chain: "Sepolia",
-        name: 'USDC (Circle)',
-        symbol: "USDC",
-        contractAddress: "0xf08A50178dfcDe18524640EA6618a1f965821715"
-    },
-    {
-        chainId: 11155111,
-        chain: "Sepolia",
-        name: 'USDC',
-        symbol: "USDC",
-        contractAddress: "0x94a9d9ac8a22534e3faca9f4e7f2e2cf85d5e4c8"
+        contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     },
     {
         chainId: 1,
@@ -107,15 +56,36 @@ const tokenList = [
         symbol: "ETH",
         contractAddress: "NATIVE" // Indicative value to denote native token
     },
-    // Binance Smart Chain's native token
+    /* --------------------------------- SEPOLIA -------------------------------- */
     {
-        chainId: 56,
-        chain: "Binance Smart Chain",
-        name: 'Binance Coin',
-        symbol: "BNB",
-        contractAddress: "NATIVE" // Indicative value to denote native token
+        chainId: 11155111,
+        chain: "Sepolia",
+        name: 'Wrapped Eth',
+        symbol: "WETH",
+        contractAddress: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9"
     },
-    // Polygon's native token
+    {
+        chainId: 11155111,
+        chain: "Sepolia",
+        name: 'USDT',
+        symbol: "USDT",
+        contractAddress: "0xe8888fe3bde6f287bdd0922bea6e0bf6e5f418e7"
+    },
+    {
+        chainId: 11155111,
+        chain: "Sepolia",
+        name: 'USDC (Circle)',
+        symbol: "USDC",
+        contractAddress: "0xbe72e441bf55620febc26715db68d3494213d8cb"
+    },
+    /* --------------------------------- POLYGON -------------------------------- */
+    {
+        chainId: 137,
+        chain: "Polygon",
+        name: 'Wrapped Eth',
+        symbol: "WETH",
+        contractAddress: "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619"
+    },
     {
         chainId: 137,
         chain: "Polygon",
@@ -124,61 +94,63 @@ const tokenList = [
         contractAddress: "NATIVE" // Indicative value to denote native token
     },
     {
-        chainId: 5777,
-        chain: "Ethereum",
+        chainId: 137,
+        chain: "Polygon",
+        name: 'USDT (Tether)',
+        symbol: "USDT",
+        contractAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
+    },
+    {
+        chainId: 137,
+        chain: "Polygon",
+        name: 'USDC (Circle)',
+        symbol: "USDC",
+        contractAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
+    },
+    /* -------------------------------- ARBITRUM -------------------------------- */
+    {
+        chainId: 42161,
+        chain: "Arbitrum",
         name: 'Wrapped Eth',
         symbol: "WETH",
-        contractAddress: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        contractAddress: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
     },
     {
-        chainId: 5777,
-        chain: "Ethereum",
+        chainId: 42161,
+        chain: "Arbitrum",
         name: 'USDT (Tether)',
         symbol: "USDT",
-        contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+        contractAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"
     },
     {
-        chainId: 5777,
-        chain: "Ethereum",
+        chainId: 42161,
+        chain: "Arbitrum",
         name: 'USDC (Circle)',
         symbol: "USDC",
-        contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        contractAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e5831"
+    },
+    /* -------------------------------- OPTIMISM -------------------------------- */ 
+    {
+        chainId: 10,
+        chain: "Optimism",
+        name: 'Wrapped Eth',
+        symbol: "WETH",
+        contractAddress: "0x4200000000000000000000000000000000000006"
     },
     {
-        chainId: 5777,
-        chain: "Ethereum",
-        name: 'Wrapped BTC',
-        symbol: "WBTC",
-        contractAddress: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
-    },
-    {
-        chainId: 137,
-        chain: "Polygon",
+        chainId: 10,
+        chain: "Optimism",
         name: 'USDT (Tether)',
         symbol: "USDT",
-        contractAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
+        contractAddress: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58"
     },
     {
-        chainId: 137,
-        chain: "Polygon",
+        chainId: 10,
+        chain: "Optimism",
         name: 'USDC (Circle)',
         symbol: "USDC",
-        contractAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
-    },
-    {
-        chainId: 56,
-        chain: "Binance Smart Chain",
-        name: 'USDT (Tether)',
-        symbol: "USDT",
-        contractAddress: "0x55d398326f99059fF775485246999027B3197955"
-    },
-    {
-        chainId: 56,
-        chain: "Binance Smart Chain",
-        name: 'USDC (Circle)',
-        symbol: "USDC",
-        contractAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
-    },
+        contractAddress: "0x7f5c764cbc14f9669b88837ca1490cca17c31607"
+    },   
 ]
 
 const uniswapFee = {
@@ -301,6 +273,8 @@ const getRpcUrl = (chainName) => {
             case 'arb':
             case 'arbitrum':
                 return `https://arbitrum-mainnet.infura.io/v3/${INFURA_API_KEY}`;
+            case 'optimism':
+                return `https://optimism-mainnet.infura.io/v3/${INFURA_API_KEY}`;
             case 'arbitrum goerli':
                 return `https://arbitrum-goerli.infura.io/v3/${INFURA_API_KEY}`;
             case 'matic':
