@@ -96,6 +96,13 @@ const tokenList = [
     {
         chainId: 137,
         chain: "Polygon",
+        name: 'Wrapped Matic',
+        symbol: "WMATIC",
+        contractAddress: "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270" 
+    },
+    {
+        chainId: 137,
+        chain: "Polygon",
         name: 'USDT (Tether)',
         symbol: "USDT",
         contractAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
@@ -105,7 +112,7 @@ const tokenList = [
         chain: "Polygon",
         name: 'USDC (Circle)',
         symbol: "USDC",
-        contractAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
+        contractAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
     },
     /* -------------------------------- ARBITRUM -------------------------------- */
     {
@@ -356,9 +363,39 @@ const getUniswapQuoterContract = (chainName) => {
     }
 }
 
+const getUniswapQuoterV2Contract = (chainName) => {
+    try{
+        const formattedChainName = chainName.toLowerCase();
+
+        switch (formattedChainName) {
+            case 'eth':
+            case 'ethereum':
+            case 'goerli':
+            case 'polygon':
+            case 'matic':
+            case 'optimism':
+            case 'arb':
+            case 'arbitrum':
+                return `0x61fFE014bA17989E743c5F6cB21bF9697530B21e`
+            case 'celo':
+                return `0x82825d0554fA07f7FC52Ab63c961F330fdEFa8E8`;
+            case 'sepolia':
+                return `0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3`
+            case 'bsc':
+                return `0x78D78E420Da98ad378D7799bE8f4AF69033EB077`;
+            default:
+                throw new Error(`Unsupported chain: ${chainName}`);
+        }
+    }catch(err){
+        console.error(err);
+        throw new Error(`Unknown chain: ${chainName}`);
+    }
+}
+
 const getProvider = async (chain) => {
     try{
         const rpcUrl = getRpcUrl(chain)
+        console.log({ rpcUrl })
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
         return provider
     }catch(err){
@@ -377,6 +414,7 @@ module.exports ={
     getProvider,
     getUniswapV3FactoryContract,
     getUniswapQuoterContract,
+    getUniswapQuoterV2Contract,
     QUOTER_CONTRACT_ADDRESS,
     SWAP_ROUTER_ADDRESS,
     V3_SWAP_ROUTER_ADDRESS,

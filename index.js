@@ -1,3 +1,29 @@
+/* -------------------------------- PACKAGES -------------------------------- */
+const fs = require("fs");
+const Joi = require("joi");
+const cors = require('cors');
+const path = require('path');
+const axios = require("axios");
+const helmet = require("helmet")
+const moment = require("moment");
+const express = require('express');
+const momentTz = require('moment-timezone');
+
+const app = express();
+
+/* --------------------------------- app.use -------------------------------- */
+app.use(cors({
+    origin: true,
+}));
+
+// app.use(express.json({ limit: '1mb' }));
+
+/* ---- Helmet helps secure Express apps by setting HTTP response headers --- */
+app.use(helmet());
+
+
+/* ----------------------------- MODULE IMPORTS ----------------------------- */
+
 const { uniswapFee } = require("./modules/uniswap/constants");
 const { uniswapGetDirectQuote, uniswapExecuteTrade, uniswapExecuteSmartRoute } = require("./modules/uniswap/swaps");
 const PRIVATE_KEY= process.env.PRIVATE_KEY
@@ -11,6 +37,7 @@ const PRIVATE_KEY= process.env.PRIVATE_KEY
 //     fromAmount: '4000',
 //     requestFee: uniswapFee.low
 // }).then(res => console.log(res))
+
 // uniswapGetDirectQuote({ 
 //     from: 'USDT', 
 //     to: 'WETH', 
@@ -24,10 +51,13 @@ const PRIVATE_KEY= process.env.PRIVATE_KEY
 // uniswapExecuteTrade({
 //     privateKey: PRIVATE_KEY,
 //     from: 'USDT', 
-//     to: 'WETH', 
-//     chain: "ethereum", 
-//     fromAmount: '0.01'
+//     to: 'WMATIC', 
+//     // chain: "sepolia", 
+//     chain: "polygon", 
+//     fromAmount: '1',
+//     requestFee: uniswapFee.high
 // }).then(res => console.log(res))
+// .catch(err => console.log(err))
 
 // uniswapExecuteSmartRoute({
 //     privateKey: PRIVATE_KEY,

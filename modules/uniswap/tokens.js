@@ -47,8 +47,8 @@ const fetchToken = async ({
     }
 }
 // fetchToken({
-//     chain: 'sepolia',
-//     symbol: 'WETH'
+//     chain: 'polygon',
+//     symbol: 'USDC'
 // }).then(res => console.log(res))
 
 module.exports = {
